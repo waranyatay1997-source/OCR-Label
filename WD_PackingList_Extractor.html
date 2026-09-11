@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WD Tools</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #f5f5f5; color: #222; min-height: 100vh; padding: 2rem; }
+  .container { max-width: 860px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 2rem; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: #666; margin-bottom: 1.5rem; }
+  #drop-zone {
+    border: 2px dashed #ccc; border-radius: 10px; padding: 2.5rem;
+    text-align: center; cursor: pointer; transition: background 0.15s, border-color 0.15s;
+    background: #fafafa; margin-bottom: 1.25rem;
+  }
+  #drop-zone:hover, #drop-zone.drag-over { background: #eef4ff; border-color: #4a90d9; }
+  #drop-zone .icon { font-size: 36px; margin-bottom: 8px; }
+  #drop-zone p { font-weight: 500; margin-bottom: 4px; }
+  #drop-zone small { color: #888; font-size: 12px; }
+  #file-input { display: none; }
+  .file-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #f0f0f0; border: 1px solid #ddd;
+    border-radius: 6px; padding: 4px 10px; font-size: 12px; margin: 3px;
+  }
+  .remove-btn { cursor: pointer; color: #aaa; font-size: 14px; }
+  .remove-btn:hover { color: #e44; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+  button {
+    padding: 8px 18px; border-radius: 7px; border: 1px solid #ccc;
+    cursor: pointer; font-size: 14px; font-weight: 500;
+    background: #fff; color: #333; transition: background 0.1s;
+  }
+  button:hover { background: #f5f5f5; }
+  button.primary { background: #222; color: #fff; border-color: #222; }
+  button.primary:hover { background: #444; }
+  button.export { background: #1a6e36; color: #fff; border-color: #1a6e36; }
+  button.export:hover { background: #24924a; }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  #status { font-size: 13px; color: #666; margin-top: 6px; min-height: 20px; }
+  #results-section { margin-top: 1.5rem; }
+  .section-label { font-size: 12px; color: #999; margin-bottom: 8px; }
+  .badge { display: inline-block; background: #e6f4ea; color: #1a6e36; font-size: 11px; padding: 2px 8px; border-radius: 5px; margin-left: 6px; }
+  .table-wrap { overflow-x: auto; border: 1px solid #e0e0e0; border-radius: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 9px 12px; background: #f5f5f5; border-bottom: 1px solid #e0e0e0; font-weight: 600; color: #555; white-space: nowrap; }
+  td { padding: 7px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; word-break: break-word; }
+  tr:last-child td { border-bottom: none; }
+  tr.group-first td { border-top: 2px solid #ddd; }
+  tr.group-first:first-child td { border-top: none; }
+  .note { font-size: 12px; color: #888; margin-top: 8px; }
+  /* Modal */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.35); z-index: 100;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: #fff; border-radius: 12px; padding: 1.5rem 2rem;
+    width: 420px; max-width: 95vw; box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  }
+  .modal-box h2 { font-size: 15px; font-weight: 600; margin-bottom: 1rem; }
+  .filename-row {
+    display: flex; align-items: center; gap: 0;
+    border: 1px solid #ccc; border-radius: 7px; overflow: hidden;
+    font-size: 13px; margin-bottom: 1rem;
+  }
+  .filename-prefix {
+    background: #f0f0f0; padding: 8px 10px;
+    color: #555; white-space: nowrap; border-right: 1px solid #ccc;
+  }
+  .filename-suffix {
+    flex: 1; padding: 8px 10px; border: none; outline: none;
+    font-size: 13px; font-family: inherit;
+  }
+  .filename-ext {
+    background: #f0f0f0; padding: 8px 10px;
+    color: #888; white-space: nowrap; border-left: 1px solid #ccc;
+  }
+  .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 1.5rem; border-bottom: 2px solid #e0e0e0; padding-bottom: 0; }
+  .tab-btn {
+    padding: 9px 20px; border: none; background: none; cursor: pointer;
+    font-size: 14px; font-weight: 500; color: #888; border-radius: 8px 8px 0 0;
+    border: 1px solid transparent; border-bottom: none; margin-bottom: -2px;
+    transition: all 0.15s;
+  }
+  .tab-btn:hover { color: #333; background: #f5f5f5; }
+  .tab-btn.active { color: #222; background: #fff; border-color: #e0e0e0; border-bottom-color: #fff; font-weight: 600; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  /* OCR tab */
+  .ocr-drop {
+    border: 2px dashed #ccc; border-radius: 10px; padding: 2.5rem;
+    text-align: center; cursor: pointer; background: #fafafa;
+    margin-bottom: 1.25rem; transition: background 0.15s, border-color 0.15s;
+  }
+  .ocr-drop:hover, .ocr-drop.drag-over { background: #fff8ee; border-color: #e8a020; }
+  .ocr-drop .icon { font-size: 36px; margin-bottom: 8px; }
+  .ocr-progress { margin: 8px 0; }
+  .progress-bar-wrap { background: #f0f0f0; border-radius: 99px; height: 8px; margin: 6px 0; overflow: hidden; }
+  .progress-bar { height: 8px; background: #e8a020; border-radius: 99px; transition: width 0.3s; width: 0%; }
+  .ocr-thumb-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1rem; }
+  .ocr-thumb {
+    position: relative; width: 90px; border-radius: 6px; overflow: hidden;
+    border: 2px solid #e0e0e0; background: #f5f5f5;
+  }
+  .ocr-thumb img { width: 100%; height: 70px; object-fit: cover; display: block; }
+  .ocr-thumb .thumb-status {
+    font-size: 10px; text-align: center; padding: 2px 4px;
+    background: #f0f0f0; color: #888;
+  }
+  .ocr-thumb.done { border-color: #1a6e36; }
+  .ocr-thumb.done .thumb-status { background: #e6f4ea; color: #1a6e36; }
+  .ocr-thumb.error { border-color: #c0392b; }
+  .ocr-thumb.error .thumb-status { background: #fdecea; color: #c0392b; }
+  .ocr-thumb .remove-img { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.5);
+    color: #fff; border: none; border-radius: 50%; width: 18px; height: 18px;
+    font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .editable-cell { min-width: 80px; }
+  .editable-cell input {
+    width: 100%; border: 1px solid transparent; background: transparent;
+    font-size: 13px; padding: 2px 4px; border-radius: 4px; font-family: inherit;
+  }
+  .editable-cell input:focus { border-color: #4a90d9; background: #fff; outline: none; }
+  td.warn input { background: #fff8ee; border-color: #e8a020 !important; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📦 WD Tools</h1>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('pl', this)">📄 Packing List</button>
+    <button class="tab-btn" onclick="switchTab('ocr', this)">📷 Pallet Label OCR</button>
+  </div>
+
+  <!-- TAB 1 -->
+  <div class="tab-panel active" id="tab-pl">
+  <p class="subtitle">อัปโหลด PDF หลายไฟล์พร้อมกัน แล้ว export ข้อมูล Shipment &amp; Pallet ID เป็น Excel (.xlsx)</p>
+
+  <div id="drop-zone" onclick="document.getElementById('file-input').click()">
+    <div class="icon">📄</div>
+    <p>คลิกหรือลาก PDF มาวางที่นี่</p>
+    <small>รองรับหลายไฟล์พร้อมกัน (.pdf)</small>
+  </div>
+  <input type="file" id="file-input" accept=".pdf" multiple>
+
+  <div id="file-list" style="margin-bottom: 1rem;"></div>
+
+  <div class="btn-row">
+    <button class="primary" id="extract-btn" disabled onclick="extractAll()">▶ ดึงข้อมูล</button>
+    <button class="export" id="export-btn" disabled onclick="openExportModal()">⬇ Export Excel (.xlsx)</button>
+    <button onclick="clearAll()">ล้างทั้งหมด</button>
+  </div>
+  <div id="status"></div>
+
+  <div id="results-section" style="display:none;">
+    <p class="section-label">ผลลัพธ์ <span id="row-count" class="badge"></span></p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Shipment Number / Shipping Mark</th>
+            <th>Marks &amp; Pallet ID / Package ID</th>
+          </tr>
+        </thead>
+        <tbody id="results-body"></tbody>
+      </table>
+    </div>
+    <p class="note">* ไฟล์ .xlsx เปิดได้ใน Microsoft Excel ได้เลย</p>
+  </div>
+</div>
+
+  </div><!-- end tab-pl -->
+
+  <!-- TAB 2: Pallet Label OCR -->
+  <div class="tab-panel" id="tab-ocr">
+    <p class="subtitle">อัปโหลดรูปถ่าย Label บน Pallet (PDF หรือ JPG/PNG) แล้ว OCR ดึงข้อมูลอัตโนมัติ</p>
+
+    <div class="ocr-drop" id="ocr-drop" onclick="document.getElementById('ocr-file-input').click()">
+      <div class="icon">📷</div>
+      <p>คลิกหรือลากไฟล์มาวางที่นี่</p>
+      <small>รองรับ PDF, JPG, PNG — หลายไฟล์พร้อมกัน</small>
+    </div>
+    <input type="file" id="ocr-file-input" accept=".pdf,.jpg,.jpeg,.png" multiple style="display:none">
+
+    <div class="ocr-thumb-grid" id="ocr-thumb-grid"></div>
+
+    <div class="btn-row">
+      <button class="primary" id="ocr-run-btn" disabled onclick="runOCR()">▶ อ่าน OCR</button>
+      <button class="export" id="ocr-export-btn" disabled onclick="openOcrExportModal()">⬇ Export Excel (.xlsx)</button>
+      <button onclick="clearOCR()">ล้างทั้งหมด</button>
+      <button onclick="changeApiKey()" style="font-size:12px;color:#888;">🔑 เปลี่ยน API Key</button>
+    </div>
+    <div id="ocr-status"></div>
+    <div class="ocr-progress" id="ocr-progress" style="display:none">
+      <div class="progress-bar-wrap"><div class="progress-bar" id="ocr-bar"></div></div>
+    </div>
+
+    <div id="ocr-results-section" style="display:none; margin-top:1.5rem;">
+      <p class="section-label">ผลลัพธ์ <span id="ocr-row-count" class="badge"></span>
+        <span style="font-size:11px;color:#aaa;margin-left:8px;">คลิกที่ช่องเพื่อแก้ไขได้</span>
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Package ID</th>
+              <th>Gross Weight</th>
+              <th>Pallet ID</th>
+              <th>PK (Shipment)</th>
+            </tr>
+          </thead>
+          <tbody id="ocr-results-body"></tbody>
+        </table>
+      </div>
+      <p class="note">* คลิกที่ช่องในตารางเพื่อแก้ไขก่อน Export</p>
+    </div>
+  </div><!-- end tab-ocr -->
+
+  <!-- OCR Export Modal -->
+  <div class="modal-overlay" id="ocr-export-modal">
+    <div class="modal-box">
+      <h2>💾 ตั้งชื่อไฟล์ก่อน Export</h2>
+      <div class="filename-row">
+        <span class="filename-prefix" id="ocr-filename-prefix"></span>
+        <input class="filename-suffix" id="ocr-filename-suffix" type="text" placeholder="กรอกส่วนท้าย..." />
+        <span class="filename-ext">.xlsx</span>
+      </div>
+      <div class="modal-btns">
+        <button onclick="closeOcrModal()">ยกเลิก</button>
+        <button class="export" onclick="confirmOcrExport()">⬇ Export</button>
+      </div>
+    </div>
+  </div>
+
+<!-- Export filename modal -->
+<div class="modal-overlay" id="export-modal">
+  <div class="modal-box">
+    <h2>💾 ตั้งชื่อไฟล์ก่อน Export</h2>
+    <div class="filename-row">
+      <span class="filename-prefix" id="filename-prefix"></span>
+      <input class="filename-suffix" id="filename-suffix" type="text" placeholder="กรอกส่วนท้าย..." />
+      <span class="filename-ext">.xlsx</span>
+    </div>
+    <div class="modal-btns">
+      <button onclick="closeModal()">ยกเลิก</button>
+      <button class="export" onclick="confirmExport()">⬇ Export</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+// Pre-load Vision API key
+if (!localStorage.getItem('gv_api_key')) { localStorage.setItem('gv_api_key', 'AIzaSyAhjLGBCCcKZu0JYDl74Cqu5ojtLUdvMG0'); }
+
+let files = [];
+let results = [];
+
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const fileList = document.getElementById('file-list');
+const extractBtn = document.getElementById('extract-btn');
+const exportBtn = document.getElementById('export-btn');
+const status = document.getElementById('status');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  addFiles([...e.dataTransfer.files].filter(f => f.type === 'application/pdf'));
+});
+fileInput.addEventListener('change', e => { addFiles([...e.target.files]); fileInput.value = ''; });
+
+function addFiles(newFiles) {
+  newFiles.forEach(f => { if (!files.find(x => x.name === f.name)) files.push(f); });
+  renderFileList();
+}
+
+function renderFileList() {
+  fileList.innerHTML = '';
+  files.forEach((f, i) => {
+    const tag = document.createElement('span');
+    tag.className = 'file-tag';
+    tag.innerHTML = `📄 ${f.name} <span class="remove-btn" onclick="removeFile(${i})">✕</span>`;
+    fileList.appendChild(tag);
+  });
+  extractBtn.disabled = files.length === 0;
+  if (files.length === 0) {
+    document.getElementById('results-section').style.display = 'none';
+    exportBtn.disabled = true;
+    results = [];
+  }
+}
+
+function removeFile(i) { files.splice(i, 1); renderFileList(); }
+
+function clearAll() {
+  files = []; results = [];
+  renderFileList();
+  status.textContent = '';
+  document.getElementById('results-section').style.display = 'none';
+  exportBtn.disabled = true;
+}
+
+async function extractItemsFromPDF(file) {
+  const ab = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+  const allItems = [];
+  let yOffset = 0;
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    const page = await pdf.getPage(pageNum);
+    const content = await page.getTextContent();
+    const viewport = page.getViewport({ scale: 1 });
+    const pageH = viewport.height;
+    content.items.forEach(item => {
+      if (!item.str.trim()) return;
+      const x = item.transform[4];
+      const y = pageH - item.transform[5];
+      allItems.push({ str: item.str.trim(), x, y: y + yOffset });
+    });
+    yOffset += pageH;
+  }
+  return allItems;
+}
+
+function isNoiseStr(s) {
+  if (/^QTY/i.test(s)) return true;
+  if (/^\d+$/.test(s)) return true;
+  if (/^(TH|COO|Seq|Lin|Part|Order|Customer|DN|Customs|Marks|Package|Pallet|Net|Weight|Line|Count|ID)$/i.test(s)) return true;
+  if (/^(Package ID|Pallet ID|Marks & Pallet|Package ID\s*)$/i.test(s)) return true;
+  if (/^Page\s+\d+\s+of\s+\d+/i.test(s)) return true;
+  if (/Org\s*ID|LTHLC|LTTHC/i.test(s)) return true;
+  if (/^Marks\s*&\s*Pallet/i.test(s)) return true;
+  if (/Delivery Order|Packing List|Invoice Number|Invoice Date|Scheduled Ship/i.test(s)) return true;
+  if (/Print date|UTC Date/i.test(s)) return true;
+  if (/Page\s*\d|Org\s*ID|Marks\s*&|Pallet\s*ID\s*\//i.test(s)) return true;
+  return false;
+}
+
+function parseSingleShipment(items, shipmentNum) {
+  // หา header คอลัมน์ "Marks & Pallet ID"
+  let colX = null, colY = null;
+  for (const item of items) {
+    if (item.str.includes('Marks') || item.str.includes('Package ID')) {
+      colX = item.x;
+      colY = item.y;
+      break;
+    }
+  }
+  if (colX === null) return [{ shipment: shipmentNum, palletId: '-' }];
+
+  // หาขอบขวาของคอลัมน์
+  let nextColX = colX + 130;
+  for (const item of items) {
+    if ((item.str === 'Qty' || item.str === 'QTY') && item.y < colY + 40) {
+      nextColX = item.x;
+      break;
+    }
+  }
+
+  // หาจุดหยุด (Total Value หรือ NOTE)
+  let stopY = Infinity;
+  for (const item of items) {
+    if ((item.str.includes('Total Value') || item.str === 'NOTE:' || item.str === 'NOTE') && item.y > colY) {
+      if (item.y < stopY) stopY = item.y;
+    }
+  }
+
+  const colItems = items
+    .filter(item => {
+      if (item.y <= colY + 10) return false;
+      if (item.y >= stopY) return false;
+      if (item.x < colX - 30 || item.x > nextColX - 5) return false;
+      return !isNoiseStr(item.str);
+    })
+    .sort((a, b) => a.y - b.y);
+
+  let combined = '';
+  for (let i = 0; i < colItems.length; i++) {
+    combined += (i === 0) ? colItems[i].str : colItems[i].str;
+  }
+
+  const rawIds = combined.split(',').map(s => s.trim()).filter(s => s.length >= 3);
+  const filtered = rawIds.filter(s => {
+    if (/^\d+$/.test(s)) return false;
+    if (/^(TH|QTY|COO)$/i.test(s)) return false;
+    if (/^(Package ID|Pallet ID|Package|Pallet|Marks|ID)$/i.test(s)) return false;
+    if (s.length < 5) return false;
+    return true;
+  });
+
+  const uniqueIds = [...new Set(filtered)];
+  if (uniqueIds.length === 0) return [{ shipment: shipmentNum, palletId: '-' }];
+  return uniqueIds.map(id => ({ shipment: shipmentNum, palletId: id }));
+}
+
+function parseData(items, filename) {
+  const shipmentPattern = /^\d{8}-\d{5}$/;
+
+  // รวบรวม items ทั้งหมดที่เป็น shipment number pattern
+  const allShipmentItems = items.filter(it => shipmentPattern.test(it.str.trim()));
+
+  // ใช้ y ที่น้อยที่สุดของแต่ละ unique shipment number (= หน้าแรกที่ปรากฏ = หน้าที่มีตาราง)
+  // หน้า barcode และหน้าอื่นๆ ที่ซ้ำจะมี y มากกว่าเสมอ
+  const seenNums = new Map();
+  for (const it of allShipmentItems) {
+    const num = it.str.trim();
+    if (!seenNums.has(num) || it.y < seenNums.get(num)) {
+      seenNums.set(num, it.y);
+    }
+  }
+
+  const shipmentAnchors = [];
+  for (const [num, y] of seenNums.entries()) {
+    shipmentAnchors.push({ num, y });
+  }
+  shipmentAnchors.sort((a, b) => a.y - b.y);
+
+  // ถ้าไม่เจอเลย
+  if (shipmentAnchors.length === 0) {
+    const fullText = items.map(i => i.str).join(' ');
+    const m = fullText.match(/(\d{8}-\d{5})/);
+    return parseSingleShipment(items, m ? m[1] : '-');
+  }
+
+  // shipment เดียว
+  if (shipmentAnchors.length === 1) {
+    return parseSingleShipment(items, shipmentAnchors[0].num);
+  }
+
+  // หลาย shipments: boundary = y ของ anchor ถัดไป - buffer
+  // เราใช้ y ที่น้อยสุดของแต่ละ shipment แล้ว จึงไม่มีปัญหา barcode page ปน
+  const allResults = [];
+  for (let i = 0; i < shipmentAnchors.length; i++) {
+    const startY = shipmentAnchors[i].y - 200; // buffer จับ header เหนือ shipment number
+    const endY = i + 1 < shipmentAnchors.length
+      ? shipmentAnchors[i + 1].y - 200
+      : Infinity;
+    const segment = items.filter(item => item.y >= startY && item.y < endY);
+    allResults.push(...parseSingleShipment(segment, shipmentAnchors[i].num));
+  }
+
+  return allResults;
+}
+
+async function extractAll() {
+  results = [];
+  status.textContent = 'กำลังดึงข้อมูล...';
+  extractBtn.disabled = true;
+  document.getElementById('results-section').style.display = 'none';
+
+  for (let i = 0; i < files.length; i++) {
+    status.textContent = `กำลังอ่านไฟล์ ${i + 1}/${files.length}: ${files[i].name}`;
+    try {
+      const items = await extractItemsFromPDF(files[i]);
+      results.push(...parseData(items, files[i].name));
+    } catch(e) {
+      results.push({ shipment: 'Error', palletId: e.message });
+    }
+  }
+
+  renderResults();
+  extractBtn.disabled = false;
+  status.textContent = `เสร็จสิ้น — พบข้อมูล ${results.length} แถว`;
+}
+
+function renderResults() {
+  const tbody = document.getElementById('results-body');
+  tbody.innerHTML = '';
+  results.forEach((r, idx) => {
+    const tr = document.createElement('tr');
+    const isFirst = idx === 0 || results[idx - 1].shipment !== r.shipment;
+    tr.className = isFirst ? 'group-first' : 'group-cont';
+    tr.innerHTML = `<td>${r.shipment}</td><td>${r.palletId}</td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('row-count').textContent = `${results.length} รายการ`;
+  document.getElementById('results-section').style.display = 'block';
+  exportBtn.disabled = results.length === 0;
+}
+
+function getDatePrefix() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}${m}${d} - T.`;
+}
+
+function openExportModal() {
+  document.getElementById('filename-prefix').textContent = getDatePrefix();
+  document.getElementById('filename-suffix').value = '';
+  document.getElementById('export-modal').classList.add('open');
+  setTimeout(() => document.getElementById('filename-suffix').focus(), 50);
+}
+
+function closeModal() {
+  document.getElementById('export-modal').classList.remove('open');
+}
+
+// กด Enter ใน input = confirm
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('filename-suffix').addEventListener('keydown', e => {
+    if (e.key === 'Enter') confirmExport();
+    if (e.key === 'Escape') closeModal();
+  });
+  // คลิก overlay ด้านนอก = ปิด
+  document.getElementById('export-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('export-modal')) closeModal();
+  });
+});
+
+function confirmExport() {
+  const prefix = document.getElementById('filename-prefix').textContent;
+  const suffix = document.getElementById('filename-suffix').value.trim();
+  const filename = prefix + suffix + '.xlsx';
+  closeModal();
+  doExport(filename);
+}
+
+function doExport(filename) {
+  const header = ['Shipment Number / Shipping Mark', 'Marks & Pallet ID / Package ID'];
+  const rows = results.map(r => [r.shipment, r.palletId]);
+
+  const col1Texts = [header[0], ...rows.map(r => r[0])];
+  const col2Texts = [header[1], ...rows.map(r => r[1])];
+  const col1Width = Math.max(...col1Texts.map(s => String(s).length)) + 2;
+  const col2Width = Math.max(...col2Texts.map(s => String(s).length)) + 2;
+
+  const wsData = [header, ...rows];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols'] = [{ wch: col1Width }, { wch: col2Width }];
+
+  const headerStyle = { font: { bold: true }, fill: { fgColor: { rgb: 'F5F5F5' } } };
+  ['A1', 'B1'].forEach(cell => {
+    if (ws[cell]) ws[cell].s = headerStyle;
+  });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Packing List');
+  XLSX.writeFile(wb, filename);
+}
+
+// ===================== TAB SWITCH =====================
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ===================== OCR TAB =====================
+let ocrFiles = [];   // {file, type:'img'|'pdf', dataUrl}
+let ocrResults = []; // {packageId, grossWeight, palletId, pk}
+
+const ocrDrop = document.getElementById('ocr-drop');
+const ocrFileInput = document.getElementById('ocr-file-input');
+const ocrRunBtn = document.getElementById('ocr-run-btn');
+const ocrExportBtn = document.getElementById('ocr-export-btn');
+const ocrStatus = document.getElementById('ocr-status');
+const ocrThumbGrid = document.getElementById('ocr-thumb-grid');
+
+ocrDrop.addEventListener('dragover', e => { e.preventDefault(); ocrDrop.classList.add('drag-over'); });
+ocrDrop.addEventListener('dragleave', () => ocrDrop.classList.remove('drag-over'));
+ocrDrop.addEventListener('drop', e => {
+  e.preventDefault(); ocrDrop.classList.remove('drag-over');
+  addOcrFiles([...e.dataTransfer.files]);
+});
+ocrFileInput.addEventListener('change', e => { addOcrFiles([...e.target.files]); ocrFileInput.value = ''; });
+
+async function addOcrFiles(newFiles) {
+  for (const f of newFiles) {
+    if (f.type === 'application/pdf') {
+      // Convert PDF pages to images
+      const ab = await f.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+      for (let p = 1; p <= pdf.numPages; p++) {
+        const page = await pdf.getPage(p);
+        const vp = page.getViewport({ scale: 2 });
+        const canvas = document.createElement('canvas');
+        canvas.width = vp.width; canvas.height = vp.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+        ocrFiles.push({ name: f.name + ' p.' + p, dataUrl });
+      }
+    } else if (f.type.startsWith('image/')) {
+      const dataUrl = await new Promise(res => {
+        const r = new FileReader(); r.onload = e => res(e.target.result); r.readAsDataURL(f);
+      });
+      ocrFiles.push({ name: f.name, dataUrl });
+    }
+  }
+  renderOcrThumbs();
+}
+
+function renderOcrThumbs() {
+  ocrThumbGrid.innerHTML = '';
+  ocrFiles.forEach((f, i) => {
+    const div = document.createElement('div');
+    div.className = 'ocr-thumb'; div.id = 'thumb-' + i;
+    div.innerHTML = `
+      <button class="remove-img" onclick="removeOcrFile(${i})">✕</button>
+      <img src="${f.dataUrl}" alt="${f.name}">
+      <div class="thumb-status">${f.name.length > 14 ? f.name.slice(0,12)+'…' : f.name}</div>`;
+    ocrThumbGrid.appendChild(div);
+  });
+  ocrRunBtn.disabled = ocrFiles.length === 0;
+}
+
+function removeOcrFile(i) { ocrFiles.splice(i, 1); renderOcrThumbs(); }
+
+function clearOCR() {
+  ocrFiles = []; ocrResults = [];
+  renderOcrThumbs();
+  ocrStatus.textContent = '';
+  document.getElementById('ocr-results-section').style.display = 'none';
+  document.getElementById('ocr-progress').style.display = 'none';
+  ocrExportBtn.disabled = true;
+}
+
+// ---- Google Vision API key (stored in localStorage) ----
+function getVisionKey() {
+  return localStorage.getItem('gv_api_key') || '';
+}
+function saveVisionKey(k) {
+  localStorage.setItem('gv_api_key', k);
+}
+
+// ---- Prompt for key if missing ----
+function ensureApiKey() {
+  let key = getVisionKey();
+  if (!key) {
+    key = prompt('กรุณาใส่ Google Cloud Vision API Key:\n(จะเก็บไว้ใน browser ไม่ต้องใส่ซ้ำ)');
+    if (key) saveVisionKey(key.trim());
+  }
+  return key ? key.trim() : null;
+}
+
+// ---- Change API key button ----
+function changeApiKey() {
+  const key = prompt('ใส่ Google Cloud Vision API Key ใหม่:', getVisionKey());
+  if (key !== null) saveVisionKey(key.trim());
+}
+
+async function callGoogleVision(dataUrl, apiKey) {
+  const base64 = dataUrl.split(',')[1];
+  const body = {
+    requests: [{
+      image: { content: base64 },
+      features: [{ type: 'TEXT_DETECTION', maxResults: 1 }]
+    }]
+  };
+  const res = await fetch(
+    `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+  );
+  if (!res.ok) throw new Error('Vision API error: ' + res.status);
+  const data = await res.json();
+  return data.responses?.[0]?.fullTextAnnotation?.text || '';
+}
+
+async function runOCR() {
+  const apiKey = ensureApiKey();
+  if (!apiKey) { ocrStatus.textContent = 'ยกเลิก — ไม่มี API Key'; return; }
+
+  ocrResults = [];
+  ocrRunBtn.disabled = true;
+  ocrExportBtn.disabled = true;
+  document.getElementById('ocr-progress').style.display = 'block';
+  document.getElementById('ocr-results-section').style.display = 'none';
+
+  for (let i = 0; i < ocrFiles.length; i++) {
+    const thumb = document.getElementById('thumb-' + i);
+    thumb.querySelector('.thumb-status').textContent = '⏳ กำลังอ่าน...';
+    ocrStatus.textContent = `กำลังอ่าน ${i+1}/${ocrFiles.length}: ${ocrFiles[i].name}`;
+    document.getElementById('ocr-bar').style.width = ((i / ocrFiles.length) * 100) + '%';
+
+    try {
+      const text = await callGoogleVision(ocrFiles[i].dataUrl, apiKey);
+      const parsed = parseLabelText(text);
+      ocrResults.push(parsed);
+      thumb.classList.add('done');
+      thumb.querySelector('.thumb-status').textContent = '✓ ' + (parsed.palletId || '?');
+    } catch(e) {
+      ocrResults.push({ packageId: '', grossWeight: '', palletId: 'Error: ' + e.message, pk: '' });
+      thumb.classList.add('error');
+      thumb.querySelector('.thumb-status').textContent = '✗ Error';
+    }
+  }
+
+  document.getElementById('ocr-bar').style.width = '100%';
+  ocrStatus.textContent = `เสร็จ — อ่านได้ ${ocrResults.length} รูป`;
+  ocrRunBtn.disabled = false;
+  renderOcrResults();
+}
+
+function parseLabelText(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+
+  // Gross Weight — บรรทัดแรกที่มีตัวเลข + KG
+  let grossWeight = '';
+  for (const line of lines) {
+    const m = line.match(/^(\d[\d.,]*)\s*KG/i);
+    if (m) { grossWeight = m[1].replace(',', ''); break; }
+  }
+
+  // Pallet ID — บรรทัดถัดจาก Time: xx:xx
+  let palletId = '';
+  for (let i = 0; i < lines.length; i++) {
+    if (/^Time[:\s]/i.test(lines[i]) || /\d{1,2}:\d{2}\s*(AM|PM)/i.test(lines[i])) {
+      for (let j = i + 1; j <= i + 3 && j < lines.length; j++) {
+        const m = lines[j].match(/^([A-Z][A-Z0-9]{5,})\s*$/i);
+        if (m) { palletId = m[1]; break; }
+      }
+      if (palletId) break;
+    }
+  }
+  // fallback: หา pattern ID ที่ขึ้นต้นด้วย P/PW/MD
+  if (!palletId) {
+    for (const line of lines) {
+      if (/^(P[A-Z0-9]{6,}|MD[A-Z0-9]{6,})/i.test(line.trim())) {
+        palletId = line.trim().split(/\s/)[0];
+        break;
+      }
+    }
+  }
+
+  // PK — Shipment Number pattern YYYYMMDD[-—]NNNNN
+  let pk = '';
+  const pkMatch = text.match(/(\d{8}[-—–]\d{5})/);
+  if (pkMatch) pk = pkMatch[1].replace(/[—–]/, '-');
+
+  // Package ID — ตัวเลข 1-2 หลักโดดๆ ที่เขียนด้วยปากกา
+  // มักอยู่ใกล้ "Shipment Number" หรือ "Shipping Mark"
+  let packageId = '';
+  for (let i = 0; i < lines.length; i++) {
+    if (/Shipment/i.test(lines[i])) {
+      for (let j = Math.max(0, i - 5); j < i; j++) {
+        if (/^\d{1,3}$/.test(lines[j])) { packageId = lines[j]; break; }
+      }
+      break;
+    }
+  }
+
+  return { packageId, grossWeight, palletId, pk };
+}
+
+function renderOcrResults() {
+  const tbody = document.getElementById('ocr-results-body');
+  tbody.innerHTML = '';
+  ocrResults.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    const warn = (f) => !f || f === 'Error' || f === '' ? ' warn' : '';
+    tr.innerHTML = `
+      <td>${i + 1}</td>
+      <td class="editable-cell${warn(r.packageId)}"><input value="${r.packageId}" oninput="ocrResults[${i}].packageId=this.value"></td>
+      <td class="editable-cell${warn(r.grossWeight)}"><input value="${r.grossWeight}" oninput="ocrResults[${i}].grossWeight=this.value"></td>
+      <td class="editable-cell${warn(r.palletId)}"><input value="${r.palletId}" oninput="ocrResults[${i}].palletId=this.value"></td>
+      <td class="editable-cell${warn(r.pk)}"><input value="${r.pk}" oninput="ocrResults[${i}].pk=this.value"></td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('ocr-row-count').textContent = ocrResults.length + ' รูป';
+  document.getElementById('ocr-results-section').style.display = 'block';
+  ocrExportBtn.disabled = ocrResults.length === 0;
+}
+
+function openOcrExportModal() {
+  document.getElementById('ocr-filename-prefix').textContent = getDatePrefix();
+  document.getElementById('ocr-filename-suffix').value = '';
+  document.getElementById('ocr-export-modal').classList.add('open');
+  setTimeout(() => document.getElementById('ocr-filename-suffix').focus(), 50);
+}
+function closeOcrModal() { document.getElementById('ocr-export-modal').classList.remove('open'); }
+function confirmOcrExport() {
+  const prefix = document.getElementById('ocr-filename-prefix').textContent;
+  const suffix = document.getElementById('ocr-filename-suffix').value.trim();
+  closeOcrModal();
+  doOcrExport(prefix + suffix + '.xlsx');
+}
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('ocr-filename-suffix').addEventListener('keydown', e => {
+    if (e.key === 'Enter') confirmOcrExport();
+    if (e.key === 'Escape') closeOcrModal();
+  });
+  document.getElementById('ocr-export-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('ocr-export-modal')) closeOcrModal();
+  });
+});
+
+function doOcrExport(filename) {
+  const header = ['Package ID', 'Gross Weight (KG)', 'Pallet ID', 'PK (Shipment Number)'];
+  const rows = ocrResults.map(r => [r.packageId, r.grossWeight, r.palletId, r.pk]);
+  const wsData = [header, ...rows];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  const colWidths = [12, 18, 18, 22];
+  ws['!cols'] = colWidths.map(w => ({ wch: w }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Pallet Labels');
+  XLSX.writeFile(wb, filename);
+}
+
+</script>
+</body>
+</html>
