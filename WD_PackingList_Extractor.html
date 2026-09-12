@@ -127,9 +127,9 @@
           <tr>
             <th>#</th>
             <th>Package ID</th>
-            <th>Gross Weight (KG)</th>
+            <th>Gross Weight</th>
             <th>Pallet ID</th>
-            <th>PK (Shipment)</th>
+            <th>PK</th>
           </tr>
         </thead>
         <tbody id="ocr-results-body"></tbody>
@@ -370,7 +370,7 @@ function confirmExport() {
 }
 
 function doExport(filename) {
-  const header = ['Package ID', 'Gross Weight (KG)', 'Pallet ID', 'PK (Shipment Number)'];
+  const header = ['Package ID', 'Gross Weight', 'Pallet ID', 'PK'];
   const rows = ocrResults.map(r => [r.packageId, r.grossWeight, r.palletId, r.pk]);
   const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
   ws['!cols'] = [{ wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 22 }];
