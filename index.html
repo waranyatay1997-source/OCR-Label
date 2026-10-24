@@ -393,28 +393,15 @@ function toNumIfNumeric(v) {
   return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : v;
 }
 
-// PK รูปแบบ YYYYMMDD-NNNNN → เก็บเป็นตัวเลข 13 หลัก แล้วใช้ number format ให้แสดงขีดเหมือนเดิม
-function pkToNum(v) {
-  const s = String(v ?? '').trim();
-  return /^\d{8}-\d{5}$/.test(s) ? Number(s.replace('-', '')) : v;
-}
-
 function doExport(filename) {
   const header = ['Package ID', 'Gross Weight', 'Pallet ID', 'PK'];
   const rows = ocrResults.map(r => [
     toNumIfNumeric(r.packageId),
     toNumIfNumeric(r.grossWeight),
     r.palletId,
-    pkToNum(r.pk)
+    r.pk  // เก็บเป็น text พร้อมขีดกลางเหมือนป้ายจริง
   ]);
   const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
-  // ตั้ง format ให้ PK ที่เป็นตัวเลขแสดงขีดกลาง
-  rows.forEach((row, i) => {
-    if (typeof row[3] === 'number') {
-      const cell = ws[XLSX.utils.encode_cell({ r: i + 1, c: 3 })];
-      if (cell) cell.z = '00000000-00000';
-    }
-  });
   ws['!cols'] = [{ wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 22 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Pallet Labels');
